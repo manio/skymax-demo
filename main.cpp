@@ -10,6 +10,7 @@
 
 cSkymax *ups = NULL;
 atomic_bool ups_status_changed(false);
+atomic_bool ups_data_changed(false);
 
 int main()
 {
@@ -50,31 +51,34 @@ int main()
       ups_status_changed = false;
     }
 
-    string *reply = ups->GetStatus();
-    if (reply)
+    if (ups_data_changed)
     {
-      lprintf("QPIGS: %s", reply->c_str());
+      ups_data_changed = false;
 
-      //parse and display values
-      sscanf(reply->c_str(), "(%f %f %f %f %d %d %d %d %f %d %d %d %d %f %f %d", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv1, &pv2, &scc, &batt_discharge_current);
-      printf("\tAC Grid voltage: %.1f\n", voltage_grid);
-      printf("\tAC Grid frequency: %.1f\n", freq_grid);
-      printf("\tAC out voltage: %.1f\n", voltage_out);
-      printf("\tAC out frequency: %.1f\n", freq_out);
-      printf("\tLoad [%]: %d\n", load_percent);
-      printf("\tLoad [W]: %d\n", load_watt);
-      printf("\tLoad [VA]: %d\n", load_va);
-      printf("\tBus voltage: %d\n", voltage_bus);
-      printf("\tHeatsink temperature: %d\n", temp_heatsink);
-      printf("\tBattery capacity [%]: %d\n", batt_capacity);
-      printf("\tBattery voltage: %.2f\n", voltage_batt);
-      printf("\tBattery charge current [A]: %d\n", batt_charge_current);
-      printf("\tBattery discharge current [A]: %d\n", batt_discharge_current);
+      string *reply = ups->GetStatus();
+      if (reply)
+      {
+        //parse and display values
+        sscanf(reply->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %d %f %f %d", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv1, &pv2, &scc, &batt_discharge_current);
+        printf("\tAC Grid voltage: %.1f\n", voltage_grid);
+        printf("\tAC Grid frequency: %.1f\n", freq_grid);
+        printf("\tAC out voltage: %.1f\n", voltage_out);
+        printf("\tAC out frequency: %.1f\n", freq_out);
+        printf("\tLoad [%]: %d\n", load_percent);
+        printf("\tLoad [W]: %d\n", load_watt);
+        printf("\tLoad [VA]: %d\n", load_va);
+        printf("\tBus voltage: %d\n", voltage_bus);
+        printf("\tHeatsink temperature: %d\n", temp_heatsink);
+        printf("\tBattery capacity [%]: %d\n", batt_capacity);
+        printf("\tBattery voltage: %.2f\n", voltage_batt);
+        printf("\tBattery charge current [A]: %d\n", batt_charge_current);
+        printf("\tBattery discharge current [A]: %d\n", batt_discharge_current);
 
-      delete reply;
+        delete reply;
+      }
     }
 
-    sleep(3);
+    sleep(1);
   }
   lprintf("MAIN LOOP END");
 

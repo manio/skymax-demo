@@ -125,6 +125,7 @@ void cSkymax::poll()
       m.lock();
       strcpy(status, (const char*)buf+1);
       m.unlock();
+      ups_data_changed = true;
     }
 
     // reading mode (QMOD)
