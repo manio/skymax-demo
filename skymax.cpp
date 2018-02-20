@@ -1,12 +1,14 @@
-#include <unistd.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "skymax.h"
 #include "tools.h"
 #include "main.h"
 
-cSkymax::cSkymax()
+cSkymax::cSkymax(std::string devicename)
 {
+  device = devicename;
   status[0] = 0;
   mode = 0;
 }
@@ -28,31 +30,31 @@ void cSkymax::SetMode(char newmode)
   m.unlock();
 }
 
-string *cSkymax::GetMode()
+int cSkymax::GetMode()
 {
-  string *result;
+  int result;
   m.lock();
   switch (mode)
   {
-    case 'P': result = new string("Power On Mode");     break;
-    case 'S': result = new string("Standby Mode");      break;
-    case 'L': result = new string("Line Mode");         break;
-    case 'B': result = new string("Battery Mode");      break;
-    case 'F': result = new string("Fault Mode");        break;
-    case 'H': result = new string("Power Saving Mode"); break;
-    default:  result = new string("Unknown");           break;
+    case 'P': result = 1;   break;  // Power_On
+    case 'S': result = 2;   break;  // Standby
+    case 'L': result = 3;   break;  // Line
+    case 'B': result = 4;   break;  // Battery
+    case 'F': result = 5;   break;  // Fault
+    case 'H': result = 6;   break;  // Power_Saving
+    default:  result = 0;   break;  // Unknown
   }
   m.unlock();
   return result;
 }
 
-bool cSkymax::query(const char *cmd, int replysize)
+bool cSkymax::query(const char *cmd)
 {
   time_t started;
   int fd;
   int i=0, n;
 
-  fd = open("/dev/skymax", O_RDWR | O_NONBLOCK);
+  fd = open(this->device.data(), O_RDWR | O_NONBLOCK);  // device is provided by program arg (usually /dev/hidraw0)
   if (fd == -1)
   {
     lprintf("Unable to open device file (errno=%d %s)", errno, strerror(errno));
@@ -60,7 +62,7 @@ bool cSkymax::query(const char *cmd, int replysize)
     return false;
   }
 
-  //generating CRC for a command
+  // Generating CRC for a command
   uint16_t crc = cal_crc_half((uint8_t*)cmd, strlen(cmd));
   n = strlen(cmd);
   memcpy(&buf, cmd, n);
@@ -68,16 +70,21 @@ bool cSkymax::query(const char *cmd, int replysize)
   buf[n++] = crc & 0xff;
   buf[n++] = 0x0d;
 
-  //send a command
+  // Send a command
   write(fd, &buf, n);
   time(&started);
 
+  // Instead of using a fixed size for expected response length, lets find it
+  // by searching for the first returned <cr> char instead.
+  char *startbuf;
+  char *endbuf;
   do
   {
-    n = read(fd, (void*)buf+i, replysize-i);
+    // According to protocol manual, it appears no query should ever exceed 150 byte size in response
+    n = read(fd, (void*)buf+i, 150 - i);
     if (n < 0)
     {
-      if (time(NULL) - started > 2)
+      if (time(NULL) - started > 8)     // Wait 8 secs before timeout
       {
         lprintf("Skymax: %s read timeout", cmd);
         break;
@@ -89,28 +96,28 @@ bool cSkymax::query(const char *cmd, int replysize)
       }
     }
     i += n;
-  } while (i<replysize);
+
+    startbuf = (char *)&buf[0];
+    endbuf = strchr(startbuf, '\r');
+  } while (endbuf == NULL);     // Still haven't found end <cr> char as long as pointer is null
   close(fd);
 
-  if (i==replysize)
+  int replysize = endbuf - startbuf + 1;
+  //printf("Found <cr> at: %d\n", replysize);
+  
+  if (buf[0]!='(' || buf[replysize-1]!=0x0d)
   {
-    if (buf[0]!='(' || buf[replysize-1]!=0x0d)
-    {
-      lprintf("Skymax: %s: incorrect start/stop bytes", cmd);
-      return false;
-    }
-    if (!(CheckCRC(buf, replysize)))
-    {
-      lprintf("Skymax: %s: CRC Failed!!!!", cmd);
-      return false;
-    }
-    buf[i-3] = '\0'; //nullterminating on first CRC byte
-    printf("Skymax: %s: %d bytes read: %s\n", cmd, i, buf);
-    return true;
+    //lprintf("Skymax: %s: incorrect start/stop bytes", cmd);
+    return false;
   }
-  else
-    lprintf("Skymax: %s reply too short (%d bytes)", cmd, i);
-  return false;
+  if (!(CheckCRC(buf, replysize)))
+  {
+    //lprintf("Skymax: %s: CRC Failed!!!!", cmd);
+    return false;
+  }
+  buf[replysize-3] = '\0';      //nullterminating on first CRC byte
+  //printf("Skymax: %s: %d bytes read: %s\n", cmd, i, buf);
+  return true;
 }
 
 void cSkymax::poll()
@@ -119,8 +126,12 @@ void cSkymax::poll()
 
   while (true)
   {
-    // reading status (QPIGS)
-    if (query("QPIGS", 110))
+    // Reading mode
+    if (query("QMOD"))
+      SetMode(buf[1]);
+
+    // Reading status
+    if (query("QPIGS"))
     {
       m.lock();
       strcpy(status, (const char*)buf+1);
@@ -128,11 +139,18 @@ void cSkymax::poll()
       ups_data_changed = true;
     }
 
-    // reading mode (QMOD)
-    if (query("QMOD", 5))
-      SetMode(buf[1]);
-
     sleep(10);
+  }
+}
+
+void cSkymax::ExecuteCmd(const string cmd)
+{
+  // Sending any command raw
+  if (query(cmd.data()))
+  {
+    m.lock();
+    strcpy(status, (const char*)buf+1);
+    m.unlock();
   }
 }
 
