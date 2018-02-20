@@ -1,36 +1,44 @@
 --------------------------------------------------------------------------------------
-skymax-demo
+skymax
 --------------------------------------------------------------------------------------
-This is a simple demo project to show how to query the basic runtime parameters of the
-SKYMAX Expert MEX 3K-24 (Voltronic Power Axpert MEX 3K-24 clone) solar inverters.
-
-More information:
-https://skyboo.net/2017/03/monitoring-voltronic-power-axpert-mex-inverter-under-linux/
+This project was forked from manio/skymax-demo on git since it allows me to query my
+own EASunPower solar inverter.  Apparently, from what I gather on internet forums, a
+company in Taiwan called Voltronic Power sells a hardware platform used in many
+different brands of inverter.  And my brand just happens to be one of those Voltronic
+clones so all the same commands apply.
 
 --------------------------------------------------------------------------------------
 compilation / running
 --------------------------------------------------------------------------------------
 Sample build/compilation procedure:
-$ git clone git://github.com/manio/skymax-demo.git
+$ git clone https://github.com/nrm21/skymax-demo
 $ cd skymax-demo
 $ mkdir out
 $ cd out
 $ cmake ..
 $ make
 
-The code expect the /dev/skymax device to be available.
-This device has to be a symlink to the correct hidraw device.
-
-First you need to get the real hidraw device name, eg:
+Then you need to get the real hidraw device name (probably hidraw0):
 $ dmesg | grep hidraw
-[    2.872000] hidraw: raw HID events driver (C) Jiri Kosina
-[    5.321097] hid-generic 0003:0665:5161.0002: hiddev0,hidraw0: USB HID v1.11 Device [HID 0665:5161] on usb-20980000.usb-1.3.4/input0
 
-and then create a symlink:
-$ ln -s /dev/hidraw0 /dev/skymax
+and then run the program like this (assuming it is located in '/opt/skymax/out' dir):
+$ /opt/skymax/out/skymax -d /dev/hidraw0 -i 15
 
-You can run the skymax binary afterwards. It is querying the inverter in 10 secs
-interval and print results to the console.
+The program will run once, it will spit out values it receives from the inverter in
+JSON format and exits.  It was intended to be run by telegraf using the exec plugin
+every 15 seconds, and that output data will be imported into an InfluxDB instance
+where it can be easily graphed by grafana (or some other "TIG or TICK stack"-like
+software suite).
+
+The program can also be made to send raw commands to the inverter if you choose:
+$ /opt/skymax/out/skymax -d /dev/hidraw0 -r POP00 (set utility output mode)
+$ /opt/skymax/out/skymax -d /dev/hidraw0 -r POP02 (set SBU output mode)
+$ /opt/skymax/out/skymax -d /dev/hidraw0 -r PCP00 (set utility charging mode)
+$ /opt/skymax/out/skymax -d /dev/hidraw0 -r PCP03 (set solar only charging mode)
+etc...
+
+See this protocol manual for more commands that can be sent:
+http://forums.aeva.asn.au/uploads/293/HS_MS_MSX_RS232_Protocol_20140822_after_current_upgrade.pdf
 
 --------------------------------------------------------------------------------------
 license
