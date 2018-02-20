@@ -19,6 +19,19 @@ atomic_bool ups_cmd_executed(false);
 int print_help()
 {
   printf("USAGE:  skymax -d <device ex: /dev/hidraw0> [-i <run interval> | -r <raw command>] [-h | --help]\n\n");
+  printf("RAW COMMAND EXAMPLES (see protocol manual for complete list):\n");
+  printf("Set output source priority  POP00     (Utility first)\n");
+  printf("                            POP01     (Solar first)\n");
+  printf("                            POP02     (SBU)\n");
+  printf("Set charger priority        PCP00     (Utility first)\n");
+  printf("                            PCP01     (Solar first)\n");
+  printf("                            PCP02     (Solar and utility)\n");
+  printf("                            PCP03     (Solar only)\n");
+  printf("Set other commands          PEj / PDj (Enable/disable power saving)\n");
+  printf("                            PEa / PDa (Enable/disable buzzer)\n");
+  printf("                            PEb / PDb (Enable/disable overload bypass)\n");
+  printf("                            PEu / PDu (Enable/disable overload restart)\n");
+  printf("                            PEx / PDx (Enable/disable backlight)\n");
   return 1;
 }
 
