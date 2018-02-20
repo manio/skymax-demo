@@ -37,6 +37,10 @@ $ /opt/skymax/out/skymax -d /dev/hidraw0 -r PCP00 (set utility charging mode)
 $ /opt/skymax/out/skymax -d /dev/hidraw0 -r PCP03 (set solar only charging mode)
 etc...
 
+These commands can of course be scripted and put into a cron job to run them at a
+certain time of day/week as well (say, every morning at 8am switch to solar charging
+mode only and SBU output mode).
+
 See this protocol manual for more commands that can be sent:
 http://forums.aeva.asn.au/uploads/293/HS_MS_MSX_RS232_Protocol_20140822_after_current_upgrade.pdf
 
