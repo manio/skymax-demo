@@ -1,41 +1,95 @@
 #include <algorithm>
-#include <unistd.h>
+#include <fstream>
+#include <iostream>
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <thread>
+#include <unistd.h>
 #include "main.h"
 #include "inputparser.h"
 #include "tools.h"
 
-#include <pthread.h>
-#include <signal.h>
 
 cSkymax *ups = NULL;
 atomic_bool ups_status_changed(false);
 atomic_bool ups_data_changed(false);
 atomic_bool ups_cmd_executed(false);
+string devicename;
+int runinterval;
+float ampfactor;
+float wattfactor;
 
-int print_help()
+
+void attemptAddSetting(int *addTo, string addFrom)
 {
-  printf("USAGE:  skymax -d <device ex: /dev/hidraw0> [-i <run interval> | -r <raw command>] [-h | --help]\n\n");
-  printf("RAW COMMAND EXAMPLES (see protocol manual for complete list):\n");
-  printf("Set output source priority  POP00     (Utility first)\n");
-  printf("                            POP01     (Solar first)\n");
-  printf("                            POP02     (SBU)\n");
-  printf("Set charger priority        PCP00     (Utility first)\n");
-  printf("                            PCP01     (Solar first)\n");
-  printf("                            PCP02     (Solar and utility)\n");
-  printf("                            PCP03     (Solar only)\n");
-  printf("Set other commands          PEj / PDj (Enable/disable power saving)\n");
-  printf("                            PEa / PDa (Enable/disable buzzer)\n");
-  printf("                            PEb / PDb (Enable/disable overload bypass)\n");
-  printf("                            PEu / PDu (Enable/disable overload restart)\n");
-  printf("                            PEx / PDx (Enable/disable backlight)\n");
-  return 1;
+  try
+  {
+    *addTo = stof(addFrom);
+  }
+  catch (exception e)
+  {
+    cout << e.what() << '\n';
+    cout << "There's probably a string in the settings file where an int should be.\n";
+  }
 }
 
-int main(int argc, char** argv)
+
+void attemptAddSetting(float *addTo, string addFrom)
+{
+  try
+  {
+    *addTo = stof(addFrom);
+  }
+  catch (exception e)
+  {
+    cout << e.what() << '\n';
+    cout << "There's probably a string in the settings file where a floating point should be.\n";
+  }
+}
+
+
+void getSettingsFile(string filename)
+{
+  try
+  {
+    string fileline, linepart1, linepart2;
+    ifstream infile;
+    infile.open(filename);
+    while(!infile.eof())
+    {
+      getline(infile, fileline);
+      size_t firstpos = fileline.find("#");
+      if(firstpos != 0 && fileline.length() != 0)    // Ignore lines starting with # (comment lines)
+      {
+        size_t delimiter = fileline.find("=");
+        linepart1 = fileline.substr(0, delimiter);
+        linepart2 = fileline.substr(delimiter+1, string::npos - delimiter);
+
+        if(linepart1 == "device")
+          devicename = linepart2;
+        else if(linepart1 == "run_interval")
+          attemptAddSetting(&runinterval, linepart2);
+        else if(linepart1 == "amperage_factor")
+          attemptAddSetting(&ampfactor, linepart2);
+        else if(linepart1 == "watt_factor")
+          attemptAddSetting(&wattfactor, linepart2);
+        else
+          continue;
+      }
+    }
+    infile.close();
+  }
+  catch (...)
+  {
+      cout << "Settings could not be read properly...\n";
+  }
+}
+
+
+int main(int argc, char **argv)
 {
   float voltage_grid;
   float freq_grid;
@@ -49,7 +103,7 @@ int main(int argc, char** argv)
   int batt_charge_current;
   int batt_capacity;
   int temp_heatsink;
-  int pv_input_current;
+  float pv_input_current;
   float pv_input_voltage;
   float pv_input_watts;
   float pv_input_watthour;
@@ -57,59 +111,16 @@ int main(int argc, char** argv)
   float scc;
   int batt_discharge_current;
   
+  // Get command flag settings from the arguments (if any)
   InputParser cmdArgs(argc, argv);
-  // Get (non-optional) device to read (probably /dev/hidraw0 or /dev/hidraw1)
-  const std::string& devicename = cmdArgs.getCmdOption("-d");
-  const std::string& rawcmd = cmdArgs.getCmdOption("-r");
-  const std::string& runinterval = cmdArgs.getCmdOption("-i");
-  
+  const string &rawcmd = cmdArgs.getCmdOption("-r");
   if(cmdArgs.cmdOptionExists("-h") || cmdArgs.cmdOptionExists("--help"))
   {
     return print_help();
   }
-
-  if (devicename.empty())
-  {
-    printf("Device must be provided.\n");
-    return print_help();
-  }
   
-  // Now get EITHER '-r' if we are executing a command.
-  if(cmdArgs.cmdOptionExists("-r"))
-  {
-    if (rawcmd.empty())
-    {
-      printf("raw command must be provided.\n");
-      return print_help();
-    }
-  }
-  else  // OR get '-i' if we are polling instead.
-  {
-    // Check run interval for correctness
-    if (runinterval.empty())
-    {
-      printf("Run interval must be provided.\n");
-      return print_help();
-    }
-    else
-    {
-      bool has_only_digits = true;
-      for (size_t n = 0; n < runinterval.length(); n++)
-      {
-      if (!isdigit(runinterval[n]))
-        {
-          has_only_digits = false;
-          break;
-        }
-      }
-      
-      if (!has_only_digits)
-      {
-        printf("Run interval must be all digits.\n");
-        return 0;
-      }
-    }
-  }
+  // Get the rest of the settings from the conf file
+  getSettingsFile("/opt/skymax/bin/skymax.conf");
 
   bool ups_status_changed(false);
   ups = new cSkymax(devicename);
@@ -134,7 +145,7 @@ int main(int argc, char** argv)
       ups_status_changed = false;
     }
     
-    // If we recieve QPIGs data print it to screen
+    // If we receive QPIGs data print it to screen
     if (ups_data_changed)
     {
       ups_data_changed = false;
@@ -144,15 +155,18 @@ int main(int argc, char** argv)
       if (reply)
       {
         // Parse and display values
-        sscanf(reply->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %d %f %f %d", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv_input_current, &pv_input_voltage, &scc, &batt_discharge_current);
+        sscanf(reply->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %f %f %f %d", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv_input_current, &pv_input_voltage, &scc, &batt_discharge_current);
 
-        // Calculate wattage (assume 92% efficiency)
-        pv_input_watts = (pv_input_voltage * pv_input_current) * .92;
-        // Calculate watthours generated per run interval period (given as program argument)
-        pv_input_watthour = pv_input_watts / (3600 / stoi(runinterval.data()));
-        // Only calculate load watthours if we are in battery mode (line mode doesn't count towards money savings)
+        // There appears to be a large discrepancy in actual DMM
+        // measured current vs what the meter is telling me it's getting
+        pv_input_current = pv_input_current * ampfactor;
+        // Calculate wattage (assume 95% efficiency)
+        pv_input_watts = (pv_input_voltage * pv_input_current) * wattfactor;
+        // Calculate watt-hours generated per run interval period (given as program argument)
+        pv_input_watthour = pv_input_watts / (3600 / runinterval);
+        // Only calculate load watt-hours if we are in battery mode (line mode doesn't count towards money savings)
         if (mode == 4)
-            load_watthour = (float)load_watt / (3600 / stoi(runinterval.data()));
+            load_watthour = (float)load_watt / (3600 / runinterval);
 
         // Print as JSON
         printf("{\n");
@@ -162,7 +176,7 @@ int main(int argc, char** argv)
         printf("\"AC_out_voltage\":%.1f,\n", voltage_out);
         printf("\"AC_out_frequency\":%.1f,\n", freq_out);
         printf("\"PV_in_voltage\":%.1f,\n", pv_input_voltage);
-        printf("\"PV_in_current\":%d,\n", pv_input_current);
+        printf("\"PV_in_current\":%.1f,\n", pv_input_current);
         printf("\"PV_in_watts\":%.1f,\n", pv_input_watts);
         printf("\"PV_in_watthour\":%.4f,\n", pv_input_watthour);
         printf("\"Load_pct\":%d,\n", load_percent);

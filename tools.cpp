@@ -1,15 +1,16 @@
+#include <mutex>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <time.h>
 #include <sys/time.h>
-#include <string.h>
-#include "tools.h"
-#include <mutex>
 #include <string>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include "tools.h"
 
 std::mutex log_mutex;
+
 
 void lprintf(const char *format, ...)
 {
@@ -43,3 +44,24 @@ void lprintf(const char *format, ...)
   fclose(log);
   log_mutex.unlock();
 }
+
+
+int print_help()
+{
+  printf("USAGE:  skymax [-r <raw command>] | [-h | --help]\n\n");
+  printf("RAW COMMAND EXAMPLES (see protocol manual for complete list):\n");
+  printf("Set output source priority  POP00     (Utility first)\n");
+  printf("                            POP01     (Solar first)\n");
+  printf("                            POP02     (SBU)\n");
+  printf("Set charger priority        PCP00     (Utility first)\n");
+  printf("                            PCP01     (Solar first)\n");
+  printf("                            PCP02     (Solar and utility)\n");
+  printf("                            PCP03     (Solar only)\n");
+  printf("Set other commands          PEa / PDa (Enable/disable buzzer)\n");
+  printf("                            PEb / PDb (Enable/disable overload bypass)\n");
+  printf("                            PEj / PDj (Enable/disable power saving)\n");
+  printf("                            PEu / PDu (Enable/disable overload restart)\n");
+  printf("                            PEx / PDx (Enable/disable backlight)\n");
+  return 1;
+}
+
