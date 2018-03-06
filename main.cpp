@@ -137,7 +137,7 @@ int main(int argc, char **argv)
   {
       ups->ExecuteCmd(rawcmd);
       // We can piggyback on either GetStatus() function to return our result, it doesn't matter which
-      printf("Reply:  %s\n", ups->GetQpigsStatus()->c_str());
+      printf("Reply:  %s\n", ups->GetQpiriStatus()->c_str());
       goto endloop;
   }
 

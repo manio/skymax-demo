@@ -17,7 +17,7 @@ cSkymax::cSkymax(std::string devicename)
 string *cSkymax::GetQpigsStatus()
 {
   m.lock();
-  string *result = new string(status2);
+  string *result = new string(status1);
   m.unlock();
   return result;
 }
@@ -108,7 +108,7 @@ bool cSkymax::query(const char *cmd)
 
     startbuf = (char *)&buf[0];
     endbuf = strchr(startbuf, '\r');
-    lprintf("SKYMAX:  Current buffer: %s", startbuf);
+    lprintf("SKYMAX:  %s Current buffer: %s", cmd, startbuf);
   } while (endbuf == NULL);     // Still haven't found end <cr> char as long as pointer is null
   close(fd);
 
