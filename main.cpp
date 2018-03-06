@@ -13,9 +13,12 @@
 #include "tools.h"
 
 
+bool debugFlag = false;
 cSkymax *ups = NULL;
 atomic_bool ups_status_changed(false);
-atomic_bool ups_data_changed(false);
+atomic_bool ups_qmod_changed(false);
+atomic_bool ups_qpiri_changed(false);
+atomic_bool ups_qpigs_changed(false);
 atomic_bool ups_cmd_executed(false);
 string devicename;
 int runinterval;
@@ -110,7 +113,7 @@ int main(int argc, char **argv)
   float load_watthour = 0;
   float scc;
   int batt_discharge_current;
-  
+
   // Get command flag settings from the arguments (if any)
   InputParser cmdArgs(argc, argv);
   const string &rawcmd = cmdArgs.getCmdOption("-r");
@@ -118,7 +121,12 @@ int main(int argc, char **argv)
   {
     return print_help();
   }
-  
+  if(cmdArgs.cmdOptionExists("-d"))
+  {
+    debugFlag = true;
+  }
+  lprintf("SKYMAX:  Debug set");
+
   // Get the rest of the settings from the conf file
   getSettingsFile("/opt/skymax/bin/skymax.conf");
 
@@ -128,14 +136,16 @@ int main(int argc, char **argv)
   if (!rawcmd.empty())
   {
       ups->ExecuteCmd(rawcmd);
-      printf("Reply:  %s\n", ups->GetStatus()->c_str());
+      // We can piggyback on either GetStatus() function to return our result, it doesn't matter which
+      printf("Reply:  %s\n", ups->GetQpigsStatus()->c_str());
       goto endloop;
   }
-  
-  ups->runMultiThread();
 
+  ups->runMultiThread();
+  
   while (true)
   {
+    lprintf("SKYMAX:  Start loop");
     // If inverter mode changes print it to screen
     if (ups_status_changed)
     {
@@ -145,17 +155,20 @@ int main(int argc, char **argv)
       ups_status_changed = false;
     }
     
-    // If we receive QPIGs data print it to screen
-    if (ups_data_changed)
+    // Once we receive all queries print it to screen
+    if (ups_qmod_changed && ups_qpiri_changed && ups_qpigs_changed)
     {
-      ups_data_changed = false;
+      ups_qmod_changed = false;
+      ups_qpiri_changed = false;
+      ups_qpigs_changed = false;
       
       int mode = ups->GetMode();
-      string *reply = ups->GetStatus();
-      if (reply)
+      string *reply1 = ups->GetQpigsStatus();
+      string *reply2 = ups->GetQpiriStatus();
+      if (reply1 && reply2)
       {
         // Parse and display values
-        sscanf(reply->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %f %f %f %d", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv_input_current, &pv_input_voltage, &scc, &batt_discharge_current);
+        sscanf(reply1->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %f %f %f %d", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv_input_current, &pv_input_voltage, &scc, &batt_discharge_current);
 
         // There appears to be a large discrepancy in actual DMM
         // measured current vs what the meter is telling me it's getting
@@ -191,9 +204,11 @@ int main(int argc, char **argv)
         printf("\"Battery_discharge_current\":%d\n", batt_discharge_current);
         printf("}\n");
 
-        delete reply;
+        delete reply1;
+        delete reply2;
 
         // Do once and exit instead of loop endlessly
+        lprintf("SKYMAX:  All queries complete, exiting using goto");
         goto endloop;
       }
     }

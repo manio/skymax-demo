@@ -9,7 +9,8 @@ using namespace std;
 class cSkymax
 {
   unsigned char buf[1024]; //internal work buffer
-  char status[1024];
+  char status1[1024];
+  char status2[1024];
   char mode;
   std::string device;
   std::mutex m;
@@ -26,7 +27,8 @@ public:
     std::thread t1(&cSkymax::poll, this);
     t1.detach();
   }
-  string *GetStatus();
+  string *GetQpiriStatus();
+  string *GetQpigsStatus();
   int GetMode();
   void ExecuteCmd(const std::string cmd);
 };
