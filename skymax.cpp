@@ -75,6 +75,7 @@ bool cSkymax::query(const char *cmd)
   uint16_t crc = cal_crc_half((uint8_t*)cmd, strlen(cmd));
   n = strlen(cmd);
   memcpy(&buf, cmd, n);
+  lprintf("SKYMAX:  Current CRC: %x", crc);
   buf[n++] = crc >> 8;
   buf[n++] = crc & 0xff;
   buf[n++] = 0x0d;
@@ -108,7 +109,7 @@ bool cSkymax::query(const char *cmd)
 
     startbuf = (char *)&buf[0];
     endbuf = strchr(startbuf, '\r');
-    lprintf("SKYMAX:  %s Current buffer: %s", cmd, startbuf);
+    //lprintf("SKYMAX:  %s Current buffer: %s", cmd, startbuf);
   } while (endbuf == NULL);     // Still haven't found end <cr> char as long as pointer is null
   close(fd);
 
@@ -125,7 +126,7 @@ bool cSkymax::query(const char *cmd)
     lprintf("SKYMAX:  %s: CRC Failed!  Reply size: %d  Buffer: %s", cmd, replysize, buf);
     return false;
   }
-  buf[replysize-3] = '\0';      //nullterminating on first CRC byte
+  buf[replysize-3] = '\0';      // Null-terminating on first CRC byte
   lprintf("SKYMAX:  %s: %d bytes read: %s", cmd, i, buf);
   
   lprintf("SKYMAX:  %s query finished", cmd);
