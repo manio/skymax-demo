@@ -10,6 +10,8 @@ clones so all the same commands apply.
 --------------------------------------------------------------------------------------
 compilation / running
 --------------------------------------------------------------------------------------
+(You will need cmak,e make and gcc already installed.  Use apt-get to get them)
+
 Sample build/compilation procedure:
 $ git clone https://github.com/nrm21/skymax-demo
 $ cd skymax-demo
@@ -22,7 +24,7 @@ Then you need to get the real hidraw device name (probably hidraw0):
 $ dmesg | grep hidraw
 
 and then run the program like this (assuming it is located in '/opt/skymax/out' dir):
-$ /opt/skymax/out/skymax -d /dev/hidraw0 -i 15
+$ /opt/skymax/out/skymax
 
 The program will run once, it will spit out values it receives from the inverter in
 JSON format and exits.  It was intended to be run by telegraf using the exec plugin
@@ -31,10 +33,10 @@ where it can be easily graphed by grafana (or some other "TIG or TICK stack"-lik
 software suite).
 
 The program can also be made to send raw commands to the inverter if you choose:
-$ /opt/skymax/out/skymax -d /dev/hidraw0 -r POP00 (set utility output mode)
-$ /opt/skymax/out/skymax -d /dev/hidraw0 -r POP02 (set SBU output mode)
-$ /opt/skymax/out/skymax -d /dev/hidraw0 -r PCP00 (set utility charging mode)
-$ /opt/skymax/out/skymax -d /dev/hidraw0 -r PCP03 (set solar only charging mode)
+$ /opt/skymax/out/skymax -r POP00   # set utility output mode
+$ /opt/skymax/out/skymax -r POP02   # set SBU output mode
+$ /opt/skymax/out/skymax -r PCP00   # set utility charging mode
+$ /opt/skymax/out/skymax -r PCP03   # set solar only charging mode
 etc...
 
 These commands can of course be scripted and put into a cron job to run them at a
@@ -45,10 +47,9 @@ See this protocol manual for more commands that can be sent:
 http://forums.aeva.asn.au/uploads/293/HS_MS_MSX_RS232_Protocol_20140822_after_current_upgrade.pdf
 
 --------------------------------------------------------------------------------------
-license
+GNU License
 --------------------------------------------------------------------------------------
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-See the file COPYING for more information.
+This program is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software Foundation;
+either version 2 of the License, or (at your option) any later version.  See the file
+COPYING for more information.
