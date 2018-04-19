@@ -75,7 +75,7 @@ bool cSkymax::query(const char *cmd)
   uint16_t crc = cal_crc_half((uint8_t*)cmd, strlen(cmd));
   n = strlen(cmd);
   memcpy(&buf, cmd, n);
-  lprintf("SKYMAX:  Current CRC: %x", crc);
+  lprintf("SKYMAX:  Current CRC: %X %X", crc >> 8, crc & 0xff);
   buf[n++] = crc >> 8;
   buf[n++] = crc & 0xff;
   buf[n++] = 0x0d;
@@ -115,10 +115,10 @@ bool cSkymax::query(const char *cmd)
 
   int replysize = endbuf - startbuf + 1;
   lprintf("SKYMAX:  Found <cr> at byte: %d", replysize);
-  
+
   if (buf[0]!='(' || buf[replysize-1]!=0x0d)
   {
-    lprintf("SKYMAX:  %s: incorrect start/stop bytes", cmd);
+    lprintf("SKYMAX:  %s: incorrect start/stop bytes.  Buffer: %s", cmd, buf);
     return false;
   }
   if (!(CheckCRC(buf, replysize)))

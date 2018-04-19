@@ -210,7 +210,7 @@ int main(int argc, char **argv)
           if (mode == 4)
               load_watthour = (float)load_watt / (3600 / runinterval);
   
-          // Print as JSON
+          // Print as JSON (output is expected to be use by telegraf to send to influxdb)
           printf("{\n");
           printf("\"Inverter_mode\":%d,\n", mode);
           printf("\"AC_grid_voltage\":%.1f,\n", voltage_grid);
