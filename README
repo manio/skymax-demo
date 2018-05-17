@@ -10,7 +10,7 @@ clones so all the same commands apply.
 --------------------------------------------------------------------------------------
 compilation / running
 --------------------------------------------------------------------------------------
-(You will need cmak,e make and gcc already installed.  Use apt-get to get them)
+(You will need cmake, make and gcc already installed.  Use apt-get to get them)
 
 Sample build/compilation procedure:
 $ git clone https://github.com/nrm21/skymax-demo
