@@ -7,6 +7,11 @@ SKYMAX Expert MEX 3K-24 (Voltronic Power Axpert MEX 3K-24 clone) solar inverters
 More information:
 https://skyboo.net/2017/03/monitoring-voltronic-power-axpert-mex-inverter-under-linux/
 
+@ned-kelly created a docker based Home Assistant automation of this project and tested
+it with both Serial & USB. It is much more advanced then this simple demo project.
+If you are interested, head to:
+https://github.com/ned-kelly/docker-voltronic-homeassistant
+
 --------------------------------------------------------------------------------------
 compilation / running
 --------------------------------------------------------------------------------------
