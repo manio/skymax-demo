@@ -1,0 +1,11 @@
+# System Files
+.DS_Store
+Thumbs.db
+
+# Build Binaries
+bin/
+
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
