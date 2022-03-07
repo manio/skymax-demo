@@ -88,8 +88,6 @@ void getSettingsFile(string filename) {
                     attemptAddSetting(&ampfactor, linepart2);
                 else if(linepart1 == "watt_factor")
                     attemptAddSetting(&wattfactor, linepart2);
-                else if(linepart1 == "watt_factor")
-                    attemptAddSetting(&wattfactor, linepart2);
                 else
                     continue;
             }
