@@ -194,9 +194,7 @@ void cInverter::poll() {
             }
         }
         if (quit_thread) return;
-        lprintf("INVERTER: before leave");
         if (runOnce) {
-            lprintf("INVERTER: inside leave");
             ups_leave = true;
             exit(0);
         }
