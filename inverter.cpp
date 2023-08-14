@@ -152,6 +152,7 @@ bool cInverter::query(const char *cmd, int replysize) {
 
 void cInverter::poll() {
     int n,j;
+    extern const bool runOnce;
 
     while (true) {
 
@@ -193,6 +194,10 @@ void cInverter::poll() {
             }
         }
         if (quit_thread) return;
+        if (runOnce) {
+            ups_leave = true;
+            exit(0);
+        }
         sleep(5);
     }
 }
