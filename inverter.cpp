@@ -194,11 +194,12 @@ void cInverter::poll() {
             }
         }
         if (quit_thread) return;
+        sleep(5);
+        // leave after delay for main thread having time to printout data
         if (runOnce) {
             ups_leave = true;
             exit(0);
         }
-        sleep(5);
     }
 }
 

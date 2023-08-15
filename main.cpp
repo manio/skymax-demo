@@ -294,8 +294,7 @@ int main(int argc, char* argv[]) {
                 delete reply2;
             }
             
-        }
-        if(ups_leave) {
+        } else if (ups_leave) {
             ups->terminateThread();
             // Do once and exit instead of loop endlessly
             lprintf("INVERTER: All queries complete, exiting loop.");
