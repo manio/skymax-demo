@@ -46,6 +46,10 @@ string devicename;
 int runinterval;
 float ampfactor;
 float wattfactor;
+int qpiri = 98;
+int qpiws = 36;
+int qmod = 5;
+int qpigs = 110;
 
 // ---------------------------------------
 
@@ -70,10 +74,10 @@ void attemptAddSetting(float *addTo, string addFrom) {
 void getSettingsFile(string filename) {
 
     try {
+        int buffercount = 0;
         string fileline, linepart1, linepart2;
         ifstream infile;
         infile.open(filename);
-
         while(!infile.eof()) {
             getline(infile, fileline);
             size_t firstpos = fileline.find("#");
@@ -82,7 +86,6 @@ void getSettingsFile(string filename) {
                 size_t delimiter = fileline.find("=");
                 linepart1 = fileline.substr(0, delimiter);
                 linepart2 = fileline.substr(delimiter+1, string::npos - delimiter);
-
                 if(linepart1 == "device")
                     devicename = linepart2;
                 else if(linepart1 == "run_interval")
@@ -91,6 +94,14 @@ void getSettingsFile(string filename) {
                     attemptAddSetting(&ampfactor, linepart2);
                 else if(linepart1 == "watt_factor")
                     attemptAddSetting(&wattfactor, linepart2);
+                else if(linepart1 == "qpiri")
+                    attemptAddSetting(&qpiri, linepart2);
+                else if(linepart1 == "qpiws")
+                    attemptAddSetting(&qpiws, linepart2);
+                else if(linepart1 == "qmod")
+                    attemptAddSetting(&qmod, linepart2);
+                else if(linepart1 == "qpigs")
+                    attemptAddSetting(&qpigs, linepart2);
                 else
                     continue;
             }
@@ -176,7 +187,7 @@ int main(int argc, char* argv[]) {
     while (flock(fd, LOCK_EX)) sleep(1);
 
     bool ups_status_changed(false);
-    ups = new cInverter(devicename);
+    ups = new cInverter(devicename, qpiri, qpiws, qmod, qpigs);
 
     // Logic to send 'raw commands' to the inverter..
     if (!rawcmd.empty()) {
