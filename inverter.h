@@ -26,7 +26,7 @@ class cInverter {
     uint16_t cal_crc_half(uint8_t *pin, uint8_t len);
 
     public:
-        cInverter(std::string devicename);
+        cInverter(std::string devicename, int qpiri, int qpiws, int qmod, int qpigs);
         void poll();
         void runMultiThread() {
             t1 = std::thread(&cInverter::poll, this);
