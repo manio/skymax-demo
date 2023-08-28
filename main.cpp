@@ -74,7 +74,6 @@ void attemptAddSetting(float *addTo, string addFrom) {
 void getSettingsFile(string filename) {
 
     try {
-        int buffercount = 0;
         string fileline, linepart1, linepart2;
         ifstream infile;
         infile.open(filename);
