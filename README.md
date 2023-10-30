@@ -50,15 +50,16 @@ To get the raw output of your device, you can use the rawcmnd option providing t
 
 Here some valid example, tested on an Axpert VM3 inverter, of buffer size to provide to the rawcmdfor the associated command:
 
-# QPI = 8
-# QID = 18
-# QVFW = 18
-# QVFM2 = 19
-# QFLAG = 15
-# QBOOT = 5
-# QOPM = 6
-# default: 7, right value for PE commands
-
+```
+QPI = 8
+QID = 18
+QVFW = 18
+QVFM2 = 19
+QFLAG = 15
+QBOOT = 5
+QOPM = 6
+default: 7, valid value for PE commands
+```
 Note:
 
 - When using the `tx` command, your commands will need to follow the specification outlined [here](https://github.com/ned-kelly/docker-voltronic-homeassistant/blob/master/manual/HS_MS_MSX_RS232_Protocol_20140822_after_current_upgrade.pdf).
