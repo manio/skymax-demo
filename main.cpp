@@ -162,6 +162,8 @@ int main(int argc, char* argv[]) {
     // Get command flag settings from the arguments (if any)
     InputParser cmdArgs(argc, argv);
     const string &rawcmd = cmdArgs.getCmdOption("-r");
+    int replylen = 7;
+    sscanf(cmdArgs.getCmdOption("-l").c_str(), "%d", &replylen);
 
     if(cmdArgs.cmdOptionExists("-h") || cmdArgs.cmdOptionExists("--help")) {
         return print_help();
@@ -190,22 +192,6 @@ int main(int argc, char* argv[]) {
 
     // Logic to send 'raw commands' to the inverter..
     if (!rawcmd.empty()) {
-        int replylen;
-        if (!strcmp(rawcmd.c_str(), "QPI"))
-            replylen = 8;
-        else if (!strcmp(rawcmd.c_str(), "QID"))
-            replylen = 18;
-        else if (!strcmp(rawcmd.c_str(), "QVFW"))
-            replylen = 18;
-        else if (!strcmp(rawcmd.c_str(), "QVFW2"))
-            replylen = 19;
-        else if (!strcmp(rawcmd.c_str(), "QFLAG"))
-            replylen = 15;
-        else if (!strcmp(rawcmd.c_str(), "QBOOT"))
-            replylen = 5;
-        else if (!strcmp(rawcmd.c_str(), "QOPM"))
-            replylen = 6;
-        else replylen = 7;
         ups->ExecuteCmd(rawcmd, replylen);
         // We're piggybacking off the qpri status response...
         printf("Reply:  %s\n", ups->GetQpiriStatus()->c_str());
