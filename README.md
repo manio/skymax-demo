@@ -35,9 +35,29 @@ SUPPORTED ARGUMENTS:
           -r <raw-command>      TX 'raw' command to the inverter
           -h | --help           This Help Message
           -1 | --run-once       Runs one iteration on the inverter, and then exits
+          -l <buffersize>       Define the buffersize for the response of raw command. Default value 7. 
           -d                    Additional debugging
 
 ```
+
+#### Configuration hint:
+
+Quite a lot of inverters seams to use this protocol. The base seams not to change but depending on your device, you might have more queries available to comunicate with your device and/or more parameters in query response from inverter. 
+
+Configuration file allow you to custom the buffersize of wrapped queries qmod, qpigs, qpiri, qpiws, in case default value does not match. Those wrapped queries are use to extract part of the data exposed by your device then wrapped into nice json output.
+
+To get the raw output of your device, you can use the rawcmnd option providing the right buffersize of the query (that's where start your guessing game!).
+
+Here some valid example, tested on an Axpert VM3 inverter, of buffer size to provide to the rawcmdfor the associated command:
+
+# QPI = 8
+# QID = 18
+# QVFW = 18
+# QVFM2 = 19
+# QFLAG = 15
+# QBOOT = 5
+# QOPM = 6
+# default: 7, right value for PE commands
 
 Note:
 
