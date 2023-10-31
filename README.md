@@ -48,7 +48,7 @@ Configuration file allow you to custom the buffersize of wrapped queries qmod, q
 
 To get the raw output of your device, you can use the rawcmnd option providing the right buffersize of the query (that's where start your guessing game!).
 
-Here some valid example, tested on an Axpert VM3 inverter, of buffer size to provide to the rawcmdfor the associated command:
+Here some valid example, tested on an Axpert VM3 inverter, of buffer size to provide to the rawcmd for the associated command:
 
 ```
 QPI = 8
