@@ -114,7 +114,7 @@ bool cInverter::query(const char *cmd, int replysize) {
     write(fd, &buf, n);
     time(&started);
 
-    const READ_BUFFER_SIZE = 60; 
+    const int READ_BUFFER_SIZE = 60; 
     bool exit_loop = false;
     do {
         n = read(fd, (void*)buf+i, READ_BUFFER_SIZE);
@@ -146,7 +146,7 @@ bool cInverter::query(const char *cmd, int replysize) {
         lprintf("INVERTER: stop byte not found in buffer Buffer: %s", buf);
         return false;
     }    
-    lprintf("INVERTER: %s reply size (%d bytes)", cmd, j);
+    lprintf("INVERTER: %s reply size (%d bytes)", cmd, i);
 
 
     if (!(CheckCRC(buf, i))) {
