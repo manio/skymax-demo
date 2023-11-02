@@ -133,7 +133,7 @@ bool cInverter::query(const char *cmd, int replysize) {
             }
         }
         i += n;
-    } while (i<replysize & !exit_loop);
+    } while (i<replysize && !exit_loop);
     close(fd);
     i++;
 
@@ -142,7 +142,7 @@ bool cInverter::query(const char *cmd, int replysize) {
         return false;
     }
 
-    if (i==replysize & !exit_loop){
+    if (i==replysize && !exit_loop){
         lprintf("INVERTER: stop byte not found in buffer Buffer: %s", buf);
         return false;
     }    
