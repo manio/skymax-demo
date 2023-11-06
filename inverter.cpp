@@ -8,16 +8,12 @@
 
 #include <termios.h>
 
-cInverter::cInverter(std::string devicename, int qpiri, int qpiws, int qmod, int qpigs) {
+cInverter::cInverter(std::string devicename) {
     device = devicename;
     status1[0] = 0;
     status2[0] = 0;
     warnings[0] = 0;
-    mode = 0;
-    qpiri = qpiri;
-    qpiws = qpiws;
-    qmod = qmod;
-    qpigs = qpigs;   
+    mode = 0; 
 }
 
 string *cInverter::GetQpigsStatus() {
@@ -67,7 +63,7 @@ int cInverter::GetMode() {
     return result;
 }
 
-bool cInverter::query(const char *cmd, int replysize) {
+bool cInverter::query(const char *cmd, int max_replysize) {
     time_t started;
     int fd;
     int i=0, n;
@@ -133,7 +129,7 @@ bool cInverter::query(const char *cmd, int replysize) {
             }
         }
         i += n;
-    } while (i<replysize && !exit_loop);
+    } while (i<max_replysize && !exit_loop);
     close(fd);
     i++;
 
@@ -142,7 +138,7 @@ bool cInverter::query(const char *cmd, int replysize) {
         return false;
     }
 
-    if (i==replysize && !exit_loop){
+    if (i==max_replysize && !exit_loop){
         lprintf("INVERTER: stop byte not found in buffer Buffer: %s", buf);
         return false;
     }    
@@ -163,14 +159,14 @@ bool cInverter::query(const char *cmd, int replysize) {
 
 void cInverter::poll() {
     int n,j;
-    extern const int qpiri, qpiws, qmod, qpigs;
     extern const bool runOnce;
+    extern const int max_replylen;
 
     while (true) {
 
         // Reading mode
         if (!ups_qmod_changed) {
-            if (query("QMOD", qmod)) {
+            if (query("QMOD", max_replylen)) {
                 SetMode(buf[1]);
                 ups_qmod_changed = true;
             }
@@ -178,7 +174,7 @@ void cInverter::poll() {
 
         // reading status (QPIGS)
         if (!ups_qpigs_changed) {
-            if (query("QPIGS", qpigs)) {
+            if (query("QPIGS", max_replylen)) {
                 m.lock();
                 strcpy(status1, (const char*)buf+1);
                 m.unlock();
@@ -188,7 +184,7 @@ void cInverter::poll() {
 
         // Reading QPIRI status
         if (!ups_qpiri_changed) {
-            if (query("QPIRI", qpiri)) {
+            if (query("QPIRI", max_replylen)) {
                 m.lock();
                 strcpy(status2, (const char*)buf+1);
                 m.unlock();
@@ -198,7 +194,7 @@ void cInverter::poll() {
 
         // Get any device warnings...
         if (!ups_qpiws_changed) {
-            if (query("QPIWS", qpiws)) {
+            if (query("QPIWS", max_replylen)) {
                 m.lock();
                 strcpy(warnings, (const char*)buf+1);
                 m.unlock();
@@ -215,9 +211,9 @@ void cInverter::poll() {
     }
 }
 
-void cInverter::ExecuteCmd(const string cmd, int replylen) {
+void cInverter::ExecuteCmd(const string cmd, int max_replylen) {
     // Sending any command raw
-    if (query(cmd.data(), replylen)) {
+    if (query(cmd.data(), max_replylen)) {
         m.lock();
         strcpy(status2, (const char*)buf+1);
         m.unlock();

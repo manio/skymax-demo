@@ -46,10 +46,7 @@ string devicename;
 int runinterval;
 float ampfactor;
 float wattfactor;
-int qpiri = 98;
-int qpiws = 36;
-int qmod = 5;
-int qpigs = 110;
+int max_replylen = 255;
 
 // ---------------------------------------
 
@@ -93,14 +90,6 @@ void getSettingsFile(string filename) {
                     attemptAddSetting(&ampfactor, linepart2);
                 else if(linepart1 == "watt_factor")
                     attemptAddSetting(&wattfactor, linepart2);
-                else if(linepart1 == "qpiri")
-                    attemptAddSetting(&qpiri, linepart2);
-                else if(linepart1 == "qpiws")
-                    attemptAddSetting(&qpiws, linepart2);
-                else if(linepart1 == "qmod")
-                    attemptAddSetting(&qmod, linepart2);
-                else if(linepart1 == "qpigs")
-                    attemptAddSetting(&qpigs, linepart2);
                 else
                     continue;
             }
@@ -162,8 +151,7 @@ int main(int argc, char* argv[]) {
     // Get command flag settings from the arguments (if any)
     InputParser cmdArgs(argc, argv);
     const string &rawcmd = cmdArgs.getCmdOption("-r");
-    int replylen = 7;
-    sscanf(cmdArgs.getCmdOption("-l").c_str(), "%d", &replylen);
+    sscanf(cmdArgs.getCmdOption("-l").c_str(), "%d", &max_replylen);
 
     if(cmdArgs.cmdOptionExists("-h") || cmdArgs.cmdOptionExists("--help")) {
         return print_help();
@@ -188,11 +176,11 @@ int main(int argc, char* argv[]) {
     while (flock(fd, LOCK_EX)) sleep(1);
 
     bool ups_status_changed(false);
-    ups = new cInverter(devicename, qpiri, qpiws, qmod, qpigs);
+    ups = new cInverter(devicename);
 
     // Logic to send 'raw commands' to the inverter..
     if (!rawcmd.empty()) {
-        ups->ExecuteCmd(rawcmd, replylen);
+        ups->ExecuteCmd(rawcmd, max_replylen);
         // We're piggybacking off the qpri status response...
         printf("Reply:  %s\n", ups->GetQpiriStatus()->c_str());
         exit(0);
