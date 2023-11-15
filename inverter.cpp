@@ -13,7 +13,7 @@ cInverter::cInverter(std::string devicename) {
     status1[0] = 0;
     status2[0] = 0;
     warnings[0] = 0;
-    mode = 0; 
+    mode = 0;
 }
 
 string *cInverter::GetQpigsStatus() {
@@ -63,10 +63,10 @@ int cInverter::GetMode() {
     return result;
 }
 
-bool cInverter::query(const char *cmd, int max_replysize) {
+bool cInverter::query(const char *cmd) {
     time_t started;
     int fd;
-    int i=0, n;
+    int i=0, n, replysize;
 
     fd = open(this->device.data(), O_RDWR | O_NONBLOCK);
     if (fd == -1) {
@@ -110,48 +110,55 @@ bool cInverter::query(const char *cmd, int max_replysize) {
     write(fd, &buf, n);
     time(&started);
 
-    const int READ_BUFFER_SIZE = 60; 
-    bool exit_loop = false;
+    const int READ_BUFFER_SIZE = 15;
+    bool reading = true;
+    bool timeout = false;
     do {
         n = read(fd, (void*)buf+i, READ_BUFFER_SIZE);
-        for (int j=i+n; j>i; j--) {
-            if (buf[j] == 0x0d){
-                exit_loop = true;
-            }
-        }
         if (n < 0) {
             if (time(NULL) - started > 2) {
+                timeout = true;
                 lprintf("INVERTER: %s read timeout", cmd);
                 break;
             } else {
-                usleep(5);
+                usleep(2000);
                 continue;
             }
+        } else {
+           for (int j=i; j<i+n; j++) {
+                if (buf[j] == 0x0d){
+                    reading = false;
+                    replysize = j+1;
+                    printf("INVERTER: stop byte detected, buffersize might be %d for %s ", replysize, cmd);
+                    break;
+                }
+            }
+
         }
+        usleep(2000);
+
         i += n;
-    } while (i<max_replysize && !exit_loop);
+    } while (reading);
     close(fd);
-    i++;
+
+    if (timeout) {
+        lprintf("INVERTER: %s command timeout, or couldn't find stop byte. Byte read (%d bytes)", cmd, i);
+        return false;
+    }
+
+    lprintf("INVERTER: %s reply size (%d bytes)", cmd, replysize);
 
     if (buf[0]!='(') {
-        lprintf("INVERTER: %s: incorrect start bytes.  Buffer: %s", cmd, buf);
+        lprintf("INVERTER: %s: incorrect start bytes.  Buffer: %s ", cmd, buf);
+        return false;
+    }
+    if (!(CheckCRC(buf, replysize))) {
+        lprintf("INVERTER: %s: CRC Failed!  Reply size: %d  Buffer: %s ", cmd, replysize, buf);
         return false;
     }
 
-    if (i==max_replysize && !exit_loop){
-        lprintf("INVERTER: stop byte not found in buffer Buffer: %s", buf);
-        return false;
-    }    
-    lprintf("INVERTER: %s reply size (%d bytes)", cmd, i);
-
-
-    if (!(CheckCRC(buf, i))) {
-        lprintf("INVERTER: %s: CRC Failed!  Reply size: %d  Buffer: %s", cmd, i, buf);
-        return false;
-    }
-
-    buf[i-3] = '\0'; //nullterminating on first CRC byte
-    lprintf("INVERTER: %s: %d bytes read: %s", cmd, i, buf);
+    buf[replysize-3] = '\0'; //nullterminating on first CRC byte
+    lprintf("INVERTER: %s: %d bytes read: %s ", cmd, replysize, buf);
 
     lprintf("INVERTER: %s query finished", cmd);
     return true;
@@ -160,13 +167,12 @@ bool cInverter::query(const char *cmd, int max_replysize) {
 void cInverter::poll() {
     int n,j;
     extern const bool runOnce;
-    extern const int max_replylen;
 
     while (true) {
 
         // Reading mode
         if (!ups_qmod_changed) {
-            if (query("QMOD", max_replylen)) {
+            if (query("QMOD")) {
                 SetMode(buf[1]);
                 ups_qmod_changed = true;
             }
@@ -174,7 +180,7 @@ void cInverter::poll() {
 
         // reading status (QPIGS)
         if (!ups_qpigs_changed) {
-            if (query("QPIGS", max_replylen)) {
+            if (query("QPIGS")) {
                 m.lock();
                 strcpy(status1, (const char*)buf+1);
                 m.unlock();
@@ -184,7 +190,7 @@ void cInverter::poll() {
 
         // Reading QPIRI status
         if (!ups_qpiri_changed) {
-            if (query("QPIRI", max_replylen)) {
+            if (query("QPIRI")) {
                 m.lock();
                 strcpy(status2, (const char*)buf+1);
                 m.unlock();
@@ -194,7 +200,7 @@ void cInverter::poll() {
 
         // Get any device warnings...
         if (!ups_qpiws_changed) {
-            if (query("QPIWS", max_replylen)) {
+            if (query("QPIWS")) {
                 m.lock();
                 strcpy(warnings, (const char*)buf+1);
                 m.unlock();
@@ -211,9 +217,9 @@ void cInverter::poll() {
     }
 }
 
-void cInverter::ExecuteCmd(const string cmd, int max_replylen) {
+void cInverter::ExecuteCmd(const string cmd) {
     // Sending any command raw
-    if (query(cmd.data(), max_replylen)) {
+    if (query(cmd.data())) {
         m.lock();
         strcpy(status2, (const char*)buf+1);
         m.unlock();

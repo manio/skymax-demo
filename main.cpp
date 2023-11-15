@@ -46,7 +46,10 @@ string devicename;
 int runinterval;
 float ampfactor;
 float wattfactor;
-int max_replylen = 255;
+int qpiri = 98;
+int qpiws = 36;
+int qmod = 5;
+int qpigs = 110;
 
 // ---------------------------------------
 
@@ -90,6 +93,14 @@ void getSettingsFile(string filename) {
                     attemptAddSetting(&ampfactor, linepart2);
                 else if(linepart1 == "watt_factor")
                     attemptAddSetting(&wattfactor, linepart2);
+                else if(linepart1 == "qpiri")
+                    attemptAddSetting(&qpiri, linepart2);
+                else if(linepart1 == "qpiws")
+                    attemptAddSetting(&qpiws, linepart2);
+                else if(linepart1 == "qmod")
+                    attemptAddSetting(&qmod, linepart2);
+                else if(linepart1 == "qpigs")
+                    attemptAddSetting(&qpigs, linepart2);
                 else
                     continue;
             }
@@ -151,7 +162,8 @@ int main(int argc, char* argv[]) {
     // Get command flag settings from the arguments (if any)
     InputParser cmdArgs(argc, argv);
     const string &rawcmd = cmdArgs.getCmdOption("-r");
-    sscanf(cmdArgs.getCmdOption("-l").c_str(), "%d", &max_replylen);
+    int replylen = 7;
+    sscanf(cmdArgs.getCmdOption("-l").c_str(), "%d", &replylen);
 
     if(cmdArgs.cmdOptionExists("-h") || cmdArgs.cmdOptionExists("--help")) {
         return print_help();
@@ -180,7 +192,7 @@ int main(int argc, char* argv[]) {
 
     // Logic to send 'raw commands' to the inverter..
     if (!rawcmd.empty()) {
-        ups->ExecuteCmd(rawcmd, max_replylen);
+        ups->ExecuteCmd(rawcmd);
         // We're piggybacking off the qpri status response...
         printf("Reply:  %s\n", ups->GetQpiriStatus()->c_str());
         exit(0);
@@ -213,7 +225,7 @@ int main(int argc, char* argv[]) {
 
                 // Parse and display values
                 sscanf(reply1->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %f %f %f %d %s", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv_input_current, &pv_input_voltage, &scc_voltage, &batt_discharge_current, &device_status);
-                sscanf(reply2->c_str(), "%f %f %f %f %f %d %d %f %f %f %f %f %d %d %d %d %d %d - %d %d %d %f", &grid_voltage_rating, &grid_current_rating, &out_voltage_rating, &out_freq_rating, &out_current_rating, &out_va_rating, &out_watt_rating, &batt_rating, &batt_recharge_voltage, &batt_under_voltage, &batt_bulk_voltage, &batt_float_voltage, &batt_type, &max_grid_charge_current, &max_charge_current, &in_voltage_range, &out_source_priority, &charger_source_priority, &machine_type, &topology, &out_mode, &batt_redischarge_voltage);
+                sscanf(reply2->c_str(), "%f %f %f %f %f %d %d %f %f %f %f %f %d %d %d %d %d %d %d %d %d %f", &grid_voltage_rating, &grid_current_rating, &out_voltage_rating, &out_freq_rating, &out_current_rating, &out_va_rating, &out_watt_rating, &batt_rating, &batt_recharge_voltage, &batt_under_voltage, &batt_bulk_voltage, &batt_float_voltage, &batt_type, &max_grid_charge_current, &max_charge_current, &in_voltage_range, &out_source_priority, &charger_source_priority, &machine_type, &topology, &out_mode, &batt_redischarge_voltage);
 
                 // There appears to be a discrepancy in actual DMM measured current vs what the meter is
                 // telling me it's getting, so lets add a variable we can multiply/divide by to adjust if
@@ -277,7 +289,6 @@ int main(int argc, char* argv[]) {
                 delete reply1;
                 delete reply2;
             }
-            
         } else if (ups_leave) {
             ups->terminateThread();
             // Do once and exit instead of loop endlessly
