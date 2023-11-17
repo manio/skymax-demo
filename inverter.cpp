@@ -142,7 +142,7 @@ bool cInverter::query(const char *cmd) {
     close(fd);
 
     if (timeout) {
-        lprintf("INVERTER: %s command timeout, or couldn't find stop byte. Byte read (%d bytes)", cmd, i);
+        lprintf("INVERTER: %s command timeout, or couldn't find stop byte. Byte read (%d bytes). Buffer: %s ", cmd, i, buf);
         return false;
     }
 
