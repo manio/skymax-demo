@@ -94,6 +94,8 @@ bool cInverter::query(const char *cmd) {
     settings.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
     settings.c_lflag &= ~ISIG;
     settings.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+    settings.c_lflag &= ~ECHO;             // turn off Echo input characters.
+    settings.c_lflag &= ~IEXTEN;           // disable implementation-defined input processing.
     settings.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
     tcsetattr(fd, TCSANOW, &settings); // apply the settings
     tcflush(fd, TCOFLUSH);
