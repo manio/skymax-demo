@@ -8,16 +8,12 @@
 
 #include <termios.h>
 
-cInverter::cInverter(std::string devicename, int qpiri, int qpiws, int qmod, int qpigs) {
+cInverter::cInverter(std::string devicename) {
     device = devicename;
     status1[0] = 0;
     status2[0] = 0;
     warnings[0] = 0;
     mode = 0;
-    qpiri = qpiri;
-    qpiws = qpiws;
-    qmod = qmod;
-    qpigs = qpigs;   
 }
 
 string *cInverter::GetQpigsStatus() {
@@ -67,10 +63,10 @@ int cInverter::GetMode() {
     return result;
 }
 
-bool cInverter::query(const char *cmd, int replysize) {
+bool cInverter::query(const char *cmd) {
     time_t started;
     int fd;
-    int i=0, n;
+    int i=0, n, replysize;
 
     fd = open(this->device.data(), O_RDWR | O_NONBLOCK);
     if (fd == -1) {
@@ -87,14 +83,20 @@ bool cInverter::query(const char *cmd, int replysize) {
     struct termios settings;
     tcgetattr(fd, &settings);
 
-    cfsetospeed(&settings, baud);      // baud rate
+    cfsetspeed(&settings, baud);      // baud rate
     settings.c_cflag &= ~PARENB;       // no parity
     settings.c_cflag &= ~CSTOPB;       // 1 stop bit
-    settings.c_cflag &= ~CSIZE;
+    settings.c_cflag &= ~CSIZE;        // Clear all bits that set the data size 
     settings.c_cflag |= CS8 | CLOCAL;  // 8 bits
-    // settings.c_lflag = ICANON;         // canonical mode
-    settings.c_oflag &= ~OPOST;        // raw output
 
+    settings.c_oflag &= ~OPOST;        // Prevent special interpretation of output bytes (e.g. newline chars)
+    settings.c_lflag &= ~ICANON;       
+    settings.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+    settings.c_lflag &= ~ISIG;
+    settings.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+    settings.c_lflag &= ~ECHO;             // turn off Echo input characters.
+    settings.c_lflag &= ~IEXTEN;           // disable implementation-defined input processing.
+    settings.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
     tcsetattr(fd, TCSANOW, &settings); // apply the settings
     tcflush(fd, TCOFLUSH);
 
@@ -114,56 +116,69 @@ bool cInverter::query(const char *cmd, int replysize) {
     write(fd, &buf, n);
     time(&started);
 
+    const int READ_BUFFER_SIZE = 15;
+    bool reading = true;
+    bool timeout = false;
     do {
-        n = read(fd, (void*)buf+i, replysize-i);
+        n = read(fd, (void*)buf+i, READ_BUFFER_SIZE);
         if (n < 0) {
             if (time(NULL) - started > 2) {
+                timeout = true;
                 lprintf("INVERTER: %s read timeout", cmd);
                 break;
             } else {
-                usleep(10);
+                usleep(2000);
                 continue;
             }
+        } else {
+           for (int j=i; j<i+n; j++) {
+                if (buf[j] == 0x0d){
+                    reading = false;
+                    replysize = j+1;
+                    printf("INVERTER: stop byte detected, buffersize might be %d for %s ", replysize, cmd);
+                    break;
+                }
+            }
+
         }
+        usleep(2000);
 
         i += n;
-    } while (i<replysize);
+    } while (reading);
     close(fd);
 
-    if (i==replysize) {
-
-        lprintf("INVERTER: %s reply size (%d bytes)", cmd, i);
-
-        if (buf[0]!='(' || buf[replysize-1]!=0x0d) {
-            lprintf("INVERTER: %s: incorrect start/stop bytes.  Buffer: %s", cmd, buf);
-            return false;
-        }
-        if (!(CheckCRC(buf, replysize))) {
-            lprintf("INVERTER: %s: CRC Failed!  Reply size: %d  Buffer: %s", cmd, replysize, buf);
-            return false;
-        }
-
-        buf[i-3] = '\0'; //nullterminating on first CRC byte
-        lprintf("INVERTER: %s: %d bytes read: %s", cmd, i, buf);
-
-        lprintf("INVERTER: %s query finished", cmd);
-        return true;
-    } else {
-        lprintf("INVERTER: %s reply too short (%d bytes)", cmd, i);
+    if (timeout) {
+        lprintf("INVERTER: %s command timeout, or couldn't find stop byte. Byte read (%d bytes). Buffer: %s ", cmd, i, buf);
         return false;
     }
+
+    lprintf("INVERTER: %s reply size (%d bytes)", cmd, replysize);
+
+    if (buf[0]!='(') {
+        lprintf("INVERTER: %s: incorrect start bytes.  Buffer: %s ", cmd, buf);
+        return false;
+    }
+    if (!(CheckCRC(buf, replysize))) {
+        lprintf("INVERTER: %s: CRC Failed!  Reply size: %d  Buffer: %s ", cmd, replysize, buf);
+        return false;
+    }
+
+    buf[replysize-3] = '\0'; //nullterminating on first CRC byte
+    lprintf("INVERTER: %s: %d bytes read: %s ", cmd, replysize, buf);
+
+    lprintf("INVERTER: %s query finished", cmd);
+    return true;
 }
 
 void cInverter::poll() {
     int n,j;
-    extern const int qpiri, qpiws, qmod, qpigs;
     extern const bool runOnce;
 
     while (true) {
 
         // Reading mode
         if (!ups_qmod_changed) {
-            if (query("QMOD", qmod)) {
+            if (query("QMOD")) {
                 SetMode(buf[1]);
                 ups_qmod_changed = true;
             }
@@ -171,7 +186,7 @@ void cInverter::poll() {
 
         // reading status (QPIGS)
         if (!ups_qpigs_changed) {
-            if (query("QPIGS", qpigs)) {
+            if (query("QPIGS")) {
                 m.lock();
                 strcpy(status1, (const char*)buf+1);
                 m.unlock();
@@ -181,7 +196,7 @@ void cInverter::poll() {
 
         // Reading QPIRI status
         if (!ups_qpiri_changed) {
-            if (query("QPIRI", qpiri)) {
+            if (query("QPIRI")) {
                 m.lock();
                 strcpy(status2, (const char*)buf+1);
                 m.unlock();
@@ -191,7 +206,7 @@ void cInverter::poll() {
 
         // Get any device warnings...
         if (!ups_qpiws_changed) {
-            if (query("QPIWS", qpiws)) {
+            if (query("QPIWS")) {
                 m.lock();
                 strcpy(warnings, (const char*)buf+1);
                 m.unlock();
@@ -208,9 +223,9 @@ void cInverter::poll() {
     }
 }
 
-void cInverter::ExecuteCmd(const string cmd, int replylen) {
+void cInverter::ExecuteCmd(const string cmd) {
     // Sending any command raw
-    if (query(cmd.data(), replylen)) {
+    if (query(cmd.data())) {
         m.lock();
         strcpy(status2, (const char*)buf+1);
         m.unlock();

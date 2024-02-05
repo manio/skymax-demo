@@ -188,11 +188,11 @@ int main(int argc, char* argv[]) {
     while (flock(fd, LOCK_EX)) sleep(1);
 
     bool ups_status_changed(false);
-    ups = new cInverter(devicename, qpiri, qpiws, qmod, qpigs);
+    ups = new cInverter(devicename);
 
     // Logic to send 'raw commands' to the inverter..
     if (!rawcmd.empty()) {
-        ups->ExecuteCmd(rawcmd, replylen);
+        ups->ExecuteCmd(rawcmd);
         // We're piggybacking off the qpri status response...
         printf("Reply:  %s\n", ups->GetQpiriStatus()->c_str());
         exit(0);
@@ -225,7 +225,7 @@ int main(int argc, char* argv[]) {
 
                 // Parse and display values
                 sscanf(reply1->c_str(), "%f %f %f %f %d %d %d %d %f %d %d %d %f %f %f %d %s", &voltage_grid, &freq_grid, &voltage_out, &freq_out, &load_va, &load_watt, &load_percent, &voltage_bus, &voltage_batt, &batt_charge_current, &batt_capacity, &temp_heatsink, &pv_input_current, &pv_input_voltage, &scc_voltage, &batt_discharge_current, &device_status);
-                sscanf(reply2->c_str(), "%f %f %f %f %f %d %d %f %f %f %f %f %d %d %d %d %d %d - %d %d %d %f", &grid_voltage_rating, &grid_current_rating, &out_voltage_rating, &out_freq_rating, &out_current_rating, &out_va_rating, &out_watt_rating, &batt_rating, &batt_recharge_voltage, &batt_under_voltage, &batt_bulk_voltage, &batt_float_voltage, &batt_type, &max_grid_charge_current, &max_charge_current, &in_voltage_range, &out_source_priority, &charger_source_priority, &machine_type, &topology, &out_mode, &batt_redischarge_voltage);
+                sscanf(reply2->c_str(), "%f %f %f %f %f %d %d %f %f %f %f %f %d %d %d %d %d %d %d %d %d %f", &grid_voltage_rating, &grid_current_rating, &out_voltage_rating, &out_freq_rating, &out_current_rating, &out_va_rating, &out_watt_rating, &batt_rating, &batt_recharge_voltage, &batt_under_voltage, &batt_bulk_voltage, &batt_float_voltage, &batt_type, &max_grid_charge_current, &max_charge_current, &in_voltage_range, &out_source_priority, &charger_source_priority, &machine_type, &topology, &out_mode, &batt_redischarge_voltage);
 
                 // There appears to be a discrepancy in actual DMM measured current vs what the meter is
                 // telling me it's getting, so lets add a variable we can multiply/divide by to adjust if
@@ -289,7 +289,6 @@ int main(int argc, char* argv[]) {
                 delete reply1;
                 delete reply2;
             }
-            
         } else if (ups_leave) {
             ups->terminateThread();
             // Do once and exit instead of loop endlessly
