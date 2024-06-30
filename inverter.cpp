@@ -86,11 +86,11 @@ bool cInverter::query(const char *cmd) {
     cfsetspeed(&settings, baud);      // baud rate
     settings.c_cflag &= ~PARENB;       // no parity
     settings.c_cflag &= ~CSTOPB;       // 1 stop bit
-    settings.c_cflag &= ~CSIZE;        // Clear all bits that set the data size 
+    settings.c_cflag &= ~CSIZE;        // Clear all bits that set the data size
     settings.c_cflag |= CS8 | CLOCAL;  // 8 bits
 
     settings.c_oflag &= ~OPOST;        // Prevent special interpretation of output bytes (e.g. newline chars)
-    settings.c_lflag &= ~ICANON;       
+    settings.c_lflag &= ~ICANON;
     settings.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
     settings.c_lflag &= ~ISIG;
     settings.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
