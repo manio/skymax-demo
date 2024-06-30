@@ -135,7 +135,7 @@ bool cInverter::query(const char *cmd) {
                 if (buf[j] == 0x0d){
                     reading = false;
                     replysize = j+1;
-                    printf("INVERTER: stop byte detected, buffersize might be %d for %s ", replysize, cmd);
+                    lprintf("INVERTER: stop byte detected, buffersize might be %d for %s ", replysize, cmd);
                     break;
                 }
             }
